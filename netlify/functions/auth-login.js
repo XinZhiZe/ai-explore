@@ -1,28 +1,31 @@
 // netlify/functions/auth-login.js
-const crypto = require('crypto');
+// 移除 crypto 依赖，不需要手动处理 token
 
 exports.handler = async (event, context) => {
-  const { httpMethod, body } = event;
-  const identityURL = process.env.URL + '/.netlify/identity'; // Netlify Identity 端点
+  const { httpMethod, body, headers } = event;
+  const siteURL = process.env.URL || 'https://aiexplore.netlify.app';
+  const identityURL = `${siteURL}/.netlify/identity`;
 
   // GET 请求：检查当前登录状态
   if (httpMethod === 'GET') {
     try {
-      // 检查是否有有效的 JWT cookie
-      const cookies = parseCookies(event.headers.cookie || '');
+      const cookies = parseCookies(headers.cookie || '');
       const token = cookies.nf_jwt;
       
       if (!token) {
         return { statusCode: 401, body: JSON.stringify({ error: '未登录' }) };
       }
       
-      // 验证 token 并获取用户信息
-      const userInfo = await verifyToken(token, identityURL);
+      // 使用 Netlify 内置的 /user 端点验证 token
+      const userInfo = await getUserInfo(token, identityURL);
       
       if (userInfo) {
         return {
           statusCode: 200,
-          body: JSON.stringify({ email: userInfo.email })
+          body: JSON.stringify({ 
+            email: userInfo.email,
+            isLoggedIn: true 
+          })
         };
       } else {
         return { statusCode: 401, body: JSON.stringify({ error: '未登录' }) };
@@ -45,10 +48,14 @@ exports.handler = async (event, context) => {
         };
       }
       
-      // 调用 Netlify Identity 登录接口
+      // 调用 Netlify Identity 的内置登录接口
+      // 注意：这个接口会自动设置 HttpOnly 的 nf_jwt cookie
       const response = await fetch(`${identityURL}/token`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify({
           grant_type: 'password',
           username: email,
@@ -56,39 +63,37 @@ exports.handler = async (event, context) => {
         })
       });
       
+      const data = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
+        console.error('登录失败:', data);
         return {
           statusCode: 401,
           body: JSON.stringify({ 
-            error: errorData.error_description || '邮箱或密码错误' 
+            error: data.error_description || '邮箱或密码错误' 
           })
         };
       }
       
-      const data = await response.json();
-      
-      // 创建安全的 JWT cookie
-      const token = data.access_token;
-      const cookie = createSecureCookie('nf_jwt', token, 7); // 7天有效期
-      
+      // 登录成功！Netlify 会自动设置 nf_jwt cookie
+      // 我们只需要返回成功信息
       return {
         statusCode: 200,
         headers: {
-          'Set-Cookie': cookie,
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store'
         },
         body: JSON.stringify({ 
-          email: data.user_email,
-          token: token
+          success: true,
+          email: data.user_email || email,
+          message: '登录成功'
         })
       };
     } catch (error) {
       console.error('登录错误:', error);
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: '登录服务器错误' })
+        body: JSON.stringify({ error: '登录服务器错误: ' + error.message })
       };
     }
   }
@@ -98,32 +103,44 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Set-Cookie': 'nf_jwt=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; HttpOnly; Secure; SameSite=Strict'
+        'Set-Cookie': 'nf_jwt=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; HttpOnly; SameSite=Strict'
       },
-      body: JSON.stringify({ message: '已退出登录' })
+      body: JSON.stringify({ 
+        success: true,
+        message: '已退出登录' 
+      })
     };
   }
 
-  return { statusCode: 405, body: 'Method Not Allowed' };
+  return { 
+    statusCode: 405, 
+    body: JSON.stringify({ error: 'Method Not Allowed' }) 
+  };
 };
 
 // 辅助函数：解析 cookie
 function parseCookies(cookieHeader) {
+  if (!cookieHeader) return {};
   return cookieHeader
     .split(';')
     .reduce((cookies, cookie) => {
       const [name, ...valueParts] = cookie.trim().split('=');
       const value = valueParts.join('=');
-      cookies[name] = decodeURIComponent(value);
+      if (name && value) {
+        cookies[name.trim()] = decodeURIComponent(value.trim());
+      }
       return cookies;
     }, {});
 }
 
-// 辅助函数：验证 JWT token
-async function verifyToken(token, identityURL) {
+// 辅助函数：获取用户信息
+async function getUserInfo(token, identityURL) {
   try {
     const response = await fetch(`${identityURL}/user`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
     });
     
     if (response.ok) {
@@ -131,15 +148,7 @@ async function verifyToken(token, identityURL) {
     }
     return null;
   } catch (error) {
-    console.error('Token验证失败:', error);
+    console.error('获取用户信息失败:', error);
     return null;
   }
-}
-
-// 辅助函数：创建安全的 HTTP cookie
-function createSecureCookie(name, value, days) {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  const secureFlag = process.env.NODE_ENV === 'production' ? 'Secure; ' : '';
-  
-  return `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; HttpOnly; ${secureFlag}SameSite=Strict`;
 }
