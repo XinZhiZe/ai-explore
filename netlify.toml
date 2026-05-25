@@ -9,4 +9,4 @@
 
 # 环境变量（在 Netlify 后台设置）
 [build.environment]
-  NETLIFY_AUTH_TOKEN = "your-auth-token"
+  NETLIFY_AUTH_TOKEN = "nfp_3yg3EYa16SeqTGCP6PPZM7TLL3yJcm7Uce7d"
