@@ -2,7 +2,7 @@ const { createClient } = require('@netlify/identity');
 
 exports.handler = async (event, context) => {
     const identity = createClient({
-        siteURL: process.env.URL,
+        siteURL: process.env.NETLIFY_IDENTITY_URL || process.env.URL,
         token: process.env.NETLIFY_AUTH_TOKEN
     });
     

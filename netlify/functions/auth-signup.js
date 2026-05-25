@@ -26,7 +26,7 @@ exports.handler = async (event, context) => {
         
         // 创建 Netlify Identity 客户端
         const identity = createClient({
-            siteURL: process.env.URL || 'http://localhost:8888',
+            siteURL: process.env.NETLIFY_IDENTITY_URL || process.env.URL,
             token: process.env.NETLIFY_AUTH_TOKEN
         });
         
