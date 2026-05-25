@@ -1,4 +1,4 @@
-const { createClient } = require('@netlify/identity');
+const createClient = require('@netlify/identity');
 
 exports.handler = async (event, context) => {
     const identity = createClient({

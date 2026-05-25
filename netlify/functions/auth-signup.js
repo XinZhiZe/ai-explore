@@ -1,4 +1,4 @@
-const { createClient } = require('@netlify/identity');
+const createClient = require('@netlify/identity');
 
 exports.handler = async (event, context) => {
     // 只允许 POST 请求
