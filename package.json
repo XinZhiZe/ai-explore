@@ -10,7 +10,5 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
-  "dependencies": {
-    "@netlify/identity": "^1.2.0"
-  }
+  "dependencies": {}
 }
