@@ -11,6 +11,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@netlify/identity": "^2.6.7"
+    "@netlify/identity": "^1.2.0"
   }
 }
