@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI探索 - 登录/注册</title>
+    <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧠 AI探索</h1>
+            <p>探索人工智能的无限可能</p>
+        </header>
+
+        <!-- 登录/注册表单 -->
+        <div class="auth-container" id="authContainer">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="login">登录</button>
+                <button class="tab-button" data-tab="signup">注册</button>
+            </div>
+
+            <!-- 登录表单 -->
+            <form id="loginForm" class="auth-form active">
+                <input type="email" id="loginEmail" placeholder="邮箱" required>
+                <input type="password" id="loginPassword" placeholder="密码" required>
+                <button type="submit">登录</button>
+                <div id="loginMessage" class="message"></div>
+            </form>
+
+            <!-- 注册表单 -->
+            <form id="signupForm" class="auth-form">
+                <input type="email" id="signupEmail" placeholder="邮箱" required>
+                <input type="password" id="signupPassword" placeholder="密码（至少6位）" required>
+                <button type="submit">注册</button>
+                <div id="signupMessage" class="message"></div>
+            </form>
+        </div>
+
+        <!-- 登录后的内容 -->
+        <div id="dashboard" class="hidden">
+            <h2>欢迎, <span id="userEmail"></span>!</h2>
+            <p>你已成功进入AI探索的核心区域。</p>
+            <button id="logoutBtn">退出登录</button>
+        </div>
+    </div>
+
+    <script src="/assets/auth.js"></script>
+</body>
+</html>
