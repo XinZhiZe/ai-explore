@@ -32,7 +32,8 @@ exports.handler = async (event, context) => {
             },
             body: JSON.stringify({
                 email: email,
-                password: password
+                password: password，
+		grant_type: 'password'
             })
         });
 
