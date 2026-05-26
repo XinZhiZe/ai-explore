@@ -1,6 +1,6 @@
 // netlify/functions/auth-login.js
 exports.handler = async (event, context) => {
-    // 只允许 POST 请求
+    // 1. 只允许 POST 请求
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
@@ -9,10 +9,10 @@ exports.handler = async (event, context) => {
     }
 
     try {
-        // 解析请求体
+        // 2. 解析前端传来的数据
         const { email, password } = JSON.parse(event.body);
 
-        // 验证必填字段
+        // 3. 简单校验
         if (!email || !password) {
             return {
                 statusCode: 400,
@@ -20,57 +20,45 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // 调用 Netlify Identity 的 /token 接口进行登录
-        const response = await fetch(
-            `${process.env.URL}/.netlify/identity/token`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: email,
-                    password: password
-                })
-            }
-        );
+        // 4. 调用 Netlify Identity 的登录接口
+        // 注意：URL 里的 YOUR_NETLIFY_SITE_URL 要替换成你真实的 Netlify 域名
+        // 例如：https://your-site-name.netlify.app/.netlify/identity/token
+        const identityUrl = `${process.env.URL}/.netlify/identity/token`; 
+        
+        const response = await fetch(identityUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        });
 
-        // 解析响应
         const data = await response.json();
 
-        // 如果响应不成功（非 2xx）
+        // 5. 处理登录结果
         if (!response.ok) {
-            // 401 表示认证失败（邮箱或密码错误）
-            if (response.status === 401) {
-                return {
-                    statusCode: 401,
-                    body: JSON.stringify({ error: '邮箱或密码错误' })
-                };
-            }
-            // 其他错误（如 400、500）
-            throw new Error(data.error_description || data.msg || '登录失败');
+            // 如果 Identity 返回错误（比如密码错、用户不存在），返回 401
+            return {
+                statusCode: 401,
+                body: JSON.stringify({ error: data.error_description || data.error || '登录失败' })
+            };
         }
 
-        // 登录成功，返回 token 和用户信息
+        // 6. 登录成功，返回 token 等信息
         return {
             statusCode: 200,
-            body: JSON.stringify({
-                message: '登录成功',
-                token: data.token,
-                user: data.user
-            })
+            body: JSON.stringify(data)
         };
 
     } catch (error) {
-        console.error('登录错误:', error);
-
-        // 返回 500 服务器错误
+        // 7. 捕获所有意外错误（比如 JSON 解析失败）
+        console.error("Login function error:", error);
         return {
             statusCode: 500,
-            body: JSON.stringify({
-                error: error.message || '服务器内部错误',
-                details: error.toString()
-            })
+            body: JSON.stringify({ error: '服务器内部错误', details: error.message })
         };
     }
 };
